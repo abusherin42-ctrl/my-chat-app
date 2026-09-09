@@ -1,9 +1,24 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+from datetime import datetime
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 messages = []
+users = []
+
+
+class RegisterUser(BaseModel):
+    username: str
 
 
 class ChatMessage(BaseModel):
@@ -19,13 +34,42 @@ def home():
     }
 
 
+@app.post("/register")
+def register_user(data: RegisterUser):
+
+    username = data.username.strip()
+
+    if not username:
+        return {
+            "success": False,
+            "message": "Username cannot be empty"
+        }
+
+    if username not in users:
+        users.append(username)
+
+    return {
+        "success": True,
+        "username": username
+    }
+
+
+@app.get("/users")
+def get_users():
+
+    return {
+        "users": users
+    }
+
+
 @app.post("/send")
 def send_message(data: ChatMessage):
 
     messages.append({
         "sender": data.sender,
         "receiver": data.receiver,
-        "message": data.message
+        "message": data.message,
+        "time": datetime.now().isoformat()
     })
 
     return {
@@ -47,4 +91,4 @@ def get_messages(username: str):
         ):
             result.append(msg)
 
-    return resultclient.py
+    return result
