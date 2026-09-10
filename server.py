@@ -753,9 +753,72 @@ def delete_message(message_id: int):
 
     return {"success": True}
 
-
 # =========================
 # EDIT MESSAGE
 # =========================
 
-@app.put("/messages
+@app.put("/messages/{message_id}")
+def edit_message(message_id: int, data: EditMessage):
+
+    db = get_db()
+
+    message = db.execute("""
+        SELECT id
+        FROM messages
+        WHERE id = ?
+    """, (message_id,)).fetchone()
+
+    if not message:
+        db.close()
+        raise HTTPException(404, "Message not found")
+
+    db.execute("""
+        UPDATE messages
+        SET message = ?,
+            edited = 1
+        WHERE id = ?
+    """, (
+        data.message,
+        message_id
+    ))
+
+    db.commit()
+    db.close()
+
+    return {
+        "success": True,
+        "id": message_id,
+        "message": data.message,
+        "edited": True
+    }
+
+
+# =========================
+# USER SEARCH
+# =========================
+
+@app.get("/users/search/{keyword}")
+def search_users(keyword: str):
+
+    db = get_db()
+
+    rows = db.execute("""
+        SELECT username,
+               display_name,
+               profile_image,
+               about,
+               online,
+               last_seen
+        FROM users
+        WHERE username LIKE ?
+        OR display_name LIKE ?
+        ORDER BY username
+        LIMIT 20
+    """, (
+        f"%{keyword}%",
+        f"%{keyword}%"
+    )).fetchall()
+
+    db.close()
+
+    return [dict(row) for row in rows]
